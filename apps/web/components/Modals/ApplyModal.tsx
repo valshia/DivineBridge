@@ -1,7 +1,10 @@
+'use client';
+
 import LoadingOutlined from '@ant-design/icons/LoadingOutlined';
 import Modal from 'antd/es/modal/Modal';
 import Spin from 'antd/es/spin';
 import Image from 'next/image';
+import { useParams } from 'next/navigation';
 import { Dispatch, SetStateAction, useContext, useState } from 'react';
 import { DiscordLoginButton } from 'react-social-login-buttons';
 
@@ -10,6 +13,7 @@ import styles from './ApplyModal.module.css';
 import { MainContext } from '../../contexts/MainContext';
 import { useErrorHandler } from '../../hooks/error-handler';
 import useYouTubeAuthorize from '../../hooks/youtube';
+import { useClientTranslation } from '../../libs/client/i18n';
 import { requiredAction } from '../../libs/common/action';
 import { verifyAuthMembershipAction } from '../../libs/server/actions/verify-auth-membership';
 import { GetGuildsActionData } from '../../types/server-actions';
@@ -28,10 +32,14 @@ export default function ApplyModal({
     SetStateAction<GetGuildsActionData[number]['membershipRoles'][number] | null>
   >;
 }) {
+  const { lng } = useParams();
+  const { t } = useClientTranslation(lng);
   const { user, guilds, setGuilds, messageApi } = useContext(MainContext);
 
   const [linkingAccount, setLinkingAccount] = useState(false);
   const [verifyingMembership, setVerifyingMembership] = useState(false);
+
+  const isAuthMode = selectedMembershipRole?.membership?.type === 'auth';
 
   const errorHandler = useErrorHandler(messageApi);
 
@@ -42,7 +50,7 @@ export default function ApplyModal({
 
   return (
     <Modal
-      title={<div className="text-white">Choose a Verification Mode</div>}
+      title={<div className="text-white">{t('web.Choose a Verification Mode')}</div>}
       className={styles.modal}
       open={isModalOpen}
       footer={null}
@@ -55,11 +63,12 @@ export default function ApplyModal({
       {selectedMembershipRole !== null && (
         <>
           <div className="mt-3 mb-4">
-            <div className="fs-6 mb-2 text-white fw-700 poppins">Auth Mode</div>
+            <div className="fs-6 mb-2 text-white fw-700 poppins">{t('common.Auth Mode')}</div>
             <div className="mb-2">
               <div className="mb-1">
-                You can link your YouTube channel and authorize Divine Bridge to verify your
-                membership for{' '}
+                {t(
+                  'web.You can link your YouTube account and authorize Divine Bridge to verify your membership for',
+                )}{' '}
                 <span
                   role="button"
                   className={`fw-700 ${styles.modalChannelTitle}`}
@@ -72,12 +81,11 @@ export default function ApplyModal({
                 >
                   {selectedMembershipRole.youtube.profile.title}
                 </span>
-                .
               </div>
               {user === null ||
                 (user.youtube === null && (
                   <div className="fw-500 text-white">
-                    Please link your YouTube account to continue.
+                    {t('web.Please link your YouTube account to continue')}
                   </div>
                 ))}
             </div>
@@ -86,10 +94,15 @@ export default function ApplyModal({
                 <div className={`flex-grow-1 d-flex justify-content-center ${styles.loadingBox}`}>
                   <Spin indicator={<LoadingOutlined className="text-white fs-4" spin />} />
                 </div>
-              ) : user === null || user.youtube === null ? (
+              ) : user?.youtube === undefined || user.youtube === null ? (
                 <div className="flex-grow-1">
                   <div className="w-100 mb-2 d-flex justify-content-center">
-                    <GoogleOAuthButton className="flex-grow-1" onClick={() => authorize()} />
+                    <GoogleOAuthButton
+                      className="flex-grow-1"
+                      onClick={() => {
+                        authorize();
+                      }}
+                    />
                   </div>
                   <div className={`flex-grow-1 position-relative ${styles.youtubeBranding}`}>
                     <Image
@@ -102,7 +115,9 @@ export default function ApplyModal({
                 </div>
               ) : (
                 <div className={`px-3 py-2 rounded d-flex flex-column ${styles.channelWrapper}`}>
-                  <div className="mb-2 text-white fw-500 poppins">Your linked YouTube channel</div>
+                  <div className="mb-2 text-white fw-500 poppins">
+                    {t('web.Your linked YouTube channel')}
+                  </div>
                   <div className="d-flex align-items-center">
                     <Image
                       className="flex-shrink-0 rounded-circle"
@@ -127,14 +142,14 @@ export default function ApplyModal({
                     <div
                       role="button"
                       className={`flex-shrink-0 ms-2 btn btn-success btn-sm ${
-                        verifyingMembership ? 'disabled' : ''
+                        verifyingMembership || isAuthMode ? 'disabled' : ''
                       }`}
                       onClick={async () => {
                         setVerifyingMembership(true);
                         void messageApi.open({
                           key: 'verify-membership',
                           type: 'loading',
-                          content: 'Verifying your membership...',
+                          content: t('web.Verifying your membership'),
                           duration: 10,
                         });
                         try {
@@ -166,7 +181,7 @@ export default function ApplyModal({
                           void messageApi.open({
                             key: 'verify-membership',
                             type: 'success',
-                            content: 'Successfully verified your membership',
+                            content: t('web.Successfully verified your membership'),
                             duration: 3,
                           });
                           setIsModalOpen(false);
@@ -178,7 +193,7 @@ export default function ApplyModal({
                         }
                       }}
                     >
-                      Verify
+                      {isAuthMode ? t('web.Verified') : t('web.Verify')}
                     </div>
                   </div>
                 </div>
@@ -187,27 +202,27 @@ export default function ApplyModal({
           </div>
           <div>
             <div className={`fs-6 mb-2 text-white fw-700 ${styles.modalSubTitle}`}>
-              Screenshot Mode
+              {t('common.Screenshot Mode')}
             </div>
             <div className="mb-2">
               <div className="mb-1">
-                Alternatively, You can to go to the Discord server{' '}
+                {t('web.Alternatively You can to go to the Discord server')}{' '}
                 <span className={`fw-700 ${styles.modalGuildName}`}>
                   {(guilds ?? []).find(({ id }) => id === selectedMembershipRole.guild)?.profile
-                    .name ?? '[Unknown Server]'}
+                    .name ?? `[${t('web.Unknown Server')}]`}
                 </span>{' '}
-                and use the slash command{' '}
+                {t('web.and use the slash command')}{' '}
                 <span className={`text-white mx-1 fw-700 ${styles.modalCommand}`}>
                   /{selectedMembershipRole.config.aliasCommandName}
                 </span>{' '}
-                to submit your membership screenshot.
+                {t('web.to submit your membership screenshot')}.
               </div>
-              <div>Your request will be manually handled by the server moderators.</div>
+              <div>{t('web.Your request will be manually handled by the server moderators')}</div>
             </div>
             <div className="d-flex justify-content-center">
               <DiscordLoginButton
-                className={`${styles.modalGotoServer}`}
-                text="Go to Discord Server"
+                className={styles.modalGotoServer}
+                text={t('web.Go to Discord Server')}
                 onClick={() =>
                   window.open(
                     `https://discord.com/channels/${selectedMembershipRole.guild}`,

@@ -5,6 +5,7 @@ import {
   GuildCollection,
   MembershipDoc,
   MembershipRoleDoc,
+  MembershipRoleDocWithValidYouTubeChannel,
   YouTubeChannelDoc,
 } from '@divine-bridge/common';
 import { cookies } from 'next/headers';
@@ -16,16 +17,16 @@ import { getJWTFromCookie } from '../authjs';
 
 const getGuildsActionInputSchema = z.object({});
 
-export const getGuildsAction = authAction<typeof getGuildsActionInputSchema, GetGuildsActionData>(
-  getGuildsActionInputSchema,
-  async (_input, { userDoc }) => {
+export const getGuildsAction = authAction
+  .schema(getGuildsActionInputSchema)
+  .action<GetGuildsActionData>(async ({ ctx: { userDoc } }) => {
     // Populate UserDoc
     const populatedUserDoc = await userDoc.populate<{
       memberships: MembershipDoc[];
     }>('memberships');
 
     // Get access token from cookie
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const { access_token: accessToken } = await getJWTFromCookie(cookieStore);
 
     // Get guilds from Discord API
@@ -63,11 +64,8 @@ export const getGuildsAction = authAction<typeof getGuildsActionInputSchema, Get
         },
         membershipRoles: guildDoc.membershipRoles
           .filter(
-            (
-              membershipRoleDoc,
-            ): membershipRoleDoc is Omit<MembershipRoleDoc, 'youtube'> & {
-              youtube: YouTubeChannelDoc;
-            } => membershipRoleDoc.youtube !== null,
+            (membershipRoleDoc): membershipRoleDoc is MembershipRoleDocWithValidYouTubeChannel =>
+              membershipRoleDoc.youtube !== null,
           )
           .map((membershipRoleDoc): GetGuildsActionData[number]['membershipRoles'][number] => {
             const membership =
@@ -116,5 +114,4 @@ export const getGuildsAction = authAction<typeof getGuildsActionInputSchema, Get
         updatedAt: guildDoc.updatedAt.toISOString(),
       };
     });
-  },
-);
+  });

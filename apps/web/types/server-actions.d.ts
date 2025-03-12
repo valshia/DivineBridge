@@ -1,3 +1,5 @@
+import type { MembershipDoc } from '@divine-bridge/common';
+
 export interface GetUserActionData {
   id: string;
   profile: {
@@ -14,9 +16,9 @@ export interface GetUserActionData {
   updatedAt: string;
 }
 
-export interface DeleteAccountActionData {}
+export type DeleteAccountActionData = Record<string, never>;
 
-export interface RevokeYouTubeActionData {}
+export type RevokeYouTubeActionData = Record<string, never>;
 
 export type GetGuildsActionData = {
   id: string;

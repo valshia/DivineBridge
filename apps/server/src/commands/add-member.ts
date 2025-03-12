@@ -9,8 +9,11 @@ import { t } from '@divine-bridge/i18n';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import utc from 'dayjs/plugin/utc.js';
+import dedent from 'dedent';
 import {
   ChatInputCommandInteraction,
+  InteractionContextType,
+  MessageFlags,
   PermissionFlagsBits,
   RepliableInteraction,
   SlashCommandBuilder,
@@ -47,8 +50,8 @@ export class AddMemberCommand extends ChatInputCommand {
         .setI18nDescription('add_member_command.end_date_option_description'),
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
-    .setDMPermission(false);
-  public readonly global = true;
+    .setContexts(InteractionContextType.Guild);
+  public readonly devTeamOnly = false;
   public readonly guildOnly = true;
   public readonly moderatorOnly = true;
   public readonly requiredClientPermissions = [PermissionFlagsBits.ManageRoles];
@@ -59,7 +62,7 @@ export class AddMemberCommand extends ChatInputCommand {
   ) {
     const { user: moderator, options } = interaction;
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     // Get log channel and membership role, check if the role is manageable
     const role = options.getRole('role', true);
@@ -138,18 +141,19 @@ export class AddMemberCommand extends ChatInputCommand {
       );
       if (!confirmResult.confirmed) return;
       activeInteraction = confirmResult.interaction;
-      await activeInteraction.deferReply({ ephemeral: true });
+      await activeInteraction.deferReply({ flags: [MessageFlags.Ephemeral] });
     }
 
     // Ask for confirmation
     const confirmResult = await Utils.awaitUserConfirm(author_t, activeInteraction, 'add-member', {
-      content:
-        `${author_t('server.Are you sure you want to assign the membership role')} <@&${role.id}> ${author_t('server.to')} <@${user.id}>?\n` +
-        `${author_t('server.Their membership will expire on')} \`${endDate.format('YYYY-MM-DD')}\``,
+      content: dedent`
+        ${author_t('server.Are you sure you want to assign the membership role')} <@&${role.id}> ${author_t('server.to')} <@${user.id}>?
+        ${author_t('server.Their membership will expire on')} \`${endDate.format('YYYY-MM-DD')}\`
+      `,
     });
     if (!confirmResult.confirmed) return;
     const confirmedInteraction = confirmResult.interaction;
-    await confirmedInteraction.deferReply({ ephemeral: true });
+    await confirmedInteraction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     // Initialize log service and membership service
     const appEventLogService = await new AppEventLogService(
@@ -180,9 +184,10 @@ export class AddMemberCommand extends ChatInputCommand {
     }
 
     await confirmedInteraction.editReply({
-      content: `${author_t('server.Successfully assigned the membership role')} <@&${role.id}> ${author_t('server.to')} <@${
-        user.id
-      }>\n${author_t('server.Their membership will expire on')} \`${endDate.format('YYYY-MM-DD')}\``,
+      content: dedent`
+        ${author_t('server.Successfully assigned the membership role')} <@&${role.id}> ${author_t('server.to')} <@${user.id}>
+        ${author_t('server.Their membership will expire on')} \`${endDate.format('YYYY-MM-DD')}\`
+      `,
     });
   }
 }

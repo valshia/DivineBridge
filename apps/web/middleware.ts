@@ -1,7 +1,5 @@
 import { defaultLocale, supportedLocales } from '@divine-bridge/i18n';
-import { match } from '@formatjs/intl-localematcher';
-import Negotiator from 'negotiator';
-import { headers } from 'next/headers';
+import acceptLanguage from 'accept-language';
 import { NextMiddleware, NextResponse } from 'next/server';
 
 import { auth } from './auth';
@@ -9,21 +7,7 @@ import { publicEnv } from './libs/common/public-env';
 
 const protectedPaths = ['/dashboard'];
 
-const getLocale = (headers: Negotiator.Headers) => {
-  const languages = new Negotiator({ headers }).languages();
-
-  try {
-    // If the user's browser is set to use any language, we default to the defaultLocale
-    if (languages.length === 1 && languages[0] === '*') {
-      return defaultLocale;
-    }
-
-    return match(languages, supportedLocales, defaultLocale);
-  } catch (error) {
-    // If the language is not supported, we default to the defaultLocale
-    return defaultLocale;
-  }
-};
+acceptLanguage.languages([...supportedLocales]);
 
 export const middleware: NextMiddleware = async (request) => {
   const { pathname } = request.nextUrl;
@@ -32,15 +16,16 @@ export const middleware: NextMiddleware = async (request) => {
   );
   if (pathnameHasLocale) return;
 
-  if (protectedPaths.some((path) => pathname.startsWith(path))) {
-    const authorized = await auth();
-    if (authorized === null) {
-      return NextResponse.redirect(publicEnv.NEXT_PUBLIC_WEB_URL);
-    }
+  const session = await auth();
+  if (session === null && protectedPaths.some((path) => pathname.startsWith(path))) {
+    return NextResponse.redirect(publicEnv.NEXT_PUBLIC_WEB_URL);
   }
 
-  const requestHeaders = Object.fromEntries(headers().entries());
-  const locale = getLocale(requestHeaders);
+  const locale =
+    acceptLanguage.get(session?.user.locale) ??
+    acceptLanguage.get(request.headers.get('Accept-Language')) ??
+    defaultLocale;
+
   request.nextUrl.pathname = `/${locale}${pathname}`;
   return NextResponse.redirect(request.nextUrl);
 };

@@ -57,11 +57,20 @@ const youtubeChannelSchema = new Schema<YouTubeChannelDoc>(
         return this.create(attrs);
       },
     },
+    virtuals: {
+      membershipRoles: {
+        options: {
+          ref: 'MembershipRole',
+          localField: '_id',
+          foreignField: 'youtube',
+        },
+      },
+    },
   },
 );
 
 export const YouTubeChannelCollection =
-  (mongoose.models.YouTubeChannel as unknown as YouTubeChannelModel) ??
+  (mongoose.models.YouTubeChannel as unknown as YouTubeChannelModel | undefined) ??
   model<YouTubeChannelDoc, YouTubeChannelModel>(
     'YouTubeChannel',
     youtubeChannelSchema,

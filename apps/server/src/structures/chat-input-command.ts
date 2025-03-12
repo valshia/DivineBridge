@@ -6,16 +6,16 @@ import {
   ChatInputCommandInteraction,
   Guild,
   PermissionResolvable,
-  SlashCommandBuilder,
+  SlashCommandOptionsOnlyBuilder,
 } from 'discord.js';
 
 import { Core } from './core.js';
 
 export namespace ChatInputCommand {
-  export type CommonExecuteContext = {
+  export interface CommonExecuteContext {
     authorLocale: string;
     author_t: TFunc;
-  };
+  }
 
   export type ExecuteContext<GuildOnly extends boolean = true> = GuildOnly extends true
     ? {
@@ -28,14 +28,13 @@ export namespace ChatInputCommand {
 }
 
 export abstract class ChatInputCommand<GuildOnly extends boolean = true> extends Core {
-  public abstract readonly command: Partial<Omit<SlashCommandBuilder, 'name' | 'toJSON'>> &
-    Required<Pick<SlashCommandBuilder, 'name' | 'toJSON'>>;
-  public abstract readonly global: boolean;
+  public abstract readonly command: Omit<SlashCommandOptionsOnlyBuilder, '_sharedAddOptionMethod'>;
+  public abstract readonly devTeamOnly: boolean;
   public abstract readonly guildOnly: GuildOnly;
   public abstract readonly moderatorOnly: boolean;
   public readonly requiredClientPermissions: PermissionResolvable[] = [];
 
-  public isGuildOnly(): this is ChatInputCommand<true> {
+  public isGuildOnly(): this is ChatInputCommand {
     return this.guildOnly === true;
   }
 

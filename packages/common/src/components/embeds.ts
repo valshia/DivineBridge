@@ -1,14 +1,16 @@
 import { EmbedBuilder } from '@discordjs/builders';
+import type { TranslationKey } from '@divine-bridge/i18n';
 import { TFunc } from '@divine-bridge/i18n';
-import type { RecognizedDate } from '@divine-bridge/ocr-service';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
+import dedent from 'dedent';
 
 import { GuildDoc } from '../models/guild.js';
 import { MembershipRoleDoc } from '../models/membership-role.js';
 import { MembershipDoc } from '../models/membership.js';
 import { YouTubeChannelDoc } from '../models/youtube-channel.js';
-import { UserPayload } from '../types/common.js';
+import { MembershipRoleDocWithValidYouTubeChannel, UserPayload } from '../types/common.js';
+import type { RecognizedDate } from '../types/ocr.js';
 import { CommonUtils } from '../utils/common.js';
 import { DiscordUtils } from '../utils/discord.js';
 
@@ -85,13 +87,12 @@ export namespace Embeds {
       thumbnail: string;
     },
   ): EmbedBuilder => {
-    return baseEmbed()
+    const embed = baseEmbed()
       .setAuthor({
         name: youtubeChannel.title,
-        iconURL: `https://www.youtube.com/${youtubeChannel.customUrl}`,
+        iconURL: youtubeChannel.thumbnail,
       })
       .setTitle(youtubeChannel.title)
-      .setDescription(youtubeChannel.description)
       .setThumbnail(youtubeChannel.thumbnail)
       .addFields([
         {
@@ -105,6 +106,10 @@ export namespace Embeds {
           inline: true,
         },
       ]);
+    if (youtubeChannel.description.length > 0) {
+      embed.setDescription(youtubeChannel.description);
+    }
+    return embed;
   };
 
   export const membership = (t: TFunc, user: UserPayload, membership: MembershipDoc) => {
@@ -235,9 +240,7 @@ export namespace Embeds {
   export const screenshotSubmission = (
     t: TFunc,
     user: UserPayload,
-    membershipRoleDoc: Omit<MembershipRoleDoc, 'youtube'> & {
-      youtube: YouTubeChannelDoc;
-    },
+    membershipRoleDoc: MembershipRoleDocWithValidYouTubeChannel,
     languageName: string,
     guildName: string,
     imageUrl: string,
@@ -245,11 +248,12 @@ export namespace Embeds {
     return baseUserEmbed(t, user)
       .setTitle(t('common.Screenshot Submitted'))
       .setDescription(
-        t(
-          'common.After I finished recognizing your screenshot it will be sent to the moderators of the server for further verification',
-        ) +
-          '\n' +
-          t('common.You will receive a DM when your membership is verified'),
+        dedent`
+          ${t(
+            'common.After I finished recognizing your screenshot it will be sent to the moderators of the server for further verification',
+          )}
+          ${t('common.You will receive a DM when your membership is verified')}
+        `,
       )
       .addFields([
         {
@@ -275,7 +279,7 @@ export namespace Embeds {
   export const membershipVerificationRequest = (
     t: TFunc,
     user: UserPayload,
-    date: RecognizedDate,
+    date: RecognizedDate & { year: number | null },
     roleId: string,
     languageName: string,
     imageUrl: string,
@@ -293,8 +297,8 @@ export namespace Embeds {
         {
           name: `📅 ${t('common.Recognized Date')}`,
           value:
-            year !== null && month !== null && day !== null
-              ? `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+            year !== null && month !== null
+              ? `${year.toString()}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
               : `**${t('common.Not Recognized')}**`,
           inline: true,
         },
@@ -334,5 +338,85 @@ export namespace Embeds {
         },
       ])
       .setColor(CommonUtils.hex2int(DiscordUtils.colors.success));
+  };
+
+  export const userTutorial = (
+    t: TFunc,
+    membershipRoleDocs: MembershipRoleDocWithValidYouTubeChannel[] | null,
+  ): EmbedBuilder => {
+    const description =
+      t('docs.user-tutorial') +
+      '\n\n' +
+      dedent`${
+        membershipRoleDocs !== null && membershipRoleDocs.length > 0
+          ? dedent`
+        ${t('common.Here are the alias commands in this server')}
+        ${membershipRoleDocs.map((membershipRoleDoc) => {
+          return `- \`/${membershipRoleDoc.config.aliasCommandName}\`: ${t('verify_command.description_1')} ${membershipRoleDoc.youtube.profile.title} ${t('verify_command.description_2')}`;
+        })}
+      `
+          : `${t('common.You can use')} \`/${t('help_command.name')}\` ${t('common.command and select')} \`${t('common.Command List')}\` ${t('common.to view the alias commands in a server')}`
+      }`;
+    return new EmbedBuilder()
+      .setTitle(t('docs.title_user-tutorial'))
+      .setDescription(description.replace(/<u>/g, '__').replace(/<\/u>/g, '__'));
+  };
+
+  export const moderatorTutorial = (t: TFunc): EmbedBuilder => {
+    const description = t('docs.moderator-tutorial');
+    return new EmbedBuilder()
+      .setTitle(t('docs.title_moderator-tutorial'))
+      .setDescription(description.replace(/<u>/g, '__').replace(/<\/u>/g, '__'));
+  };
+
+  export const commandList = (
+    t: TFunc,
+    membershipRoleDocs: MembershipRoleDocWithValidYouTubeChannel[] | null,
+    chatInputCommandMap: Record<string, { moderatorOnly: boolean; devTeamOnly: boolean }>,
+  ): EmbedBuilder => {
+    return new EmbedBuilder().setTitle(t('common.Command List')).setDescription(
+      dedent`
+        ${t('common.Here are the commands you can use with Divine Bridge')}
+        ${
+          membershipRoleDocs !== null && membershipRoleDocs.length > 0
+            ? '\n' +
+              dedent`
+                **__${t('common.Server Alias Commands')}__**
+
+                ${membershipRoleDocs
+                  .map((membershipRoleDoc) => {
+                    return `- \`/${membershipRoleDoc.config.aliasCommandName}\`: ${t('verify_command.description_1')} ${membershipRoleDoc.youtube.profile.title} ${t('verify_command.description_2')}`;
+                  })
+                  .join('\n')}
+              ` +
+              '\n'
+            : ''
+        }
+        **__${t('common.User Commands')}__**
+
+        ${Object.entries(chatInputCommandMap)
+          .filter(([_name, command]) => !command.moderatorOnly && !command.devTeamOnly)
+          .map(([name]) => {
+            const originalName = name.replace(/-/g, '_');
+            const prefix = `- \`/${t(`${originalName}_command.name` as TranslationKey)}\`:`;
+            if (originalName === 'verify') {
+              return `${prefix} ${t('verify_command.description_1')} YouTube ${t('verify_command.description_2')}`;
+            }
+            return `${prefix} ${t(`${originalName}_command.description` as TranslationKey)}`;
+          })
+          .join('\n')}
+        
+        **__${t('common.Moderator Commands')}__**
+
+        ${Object.entries(chatInputCommandMap)
+          .filter(([_name, command]) => command.moderatorOnly && !command.devTeamOnly)
+          .map(([name]) => {
+            const originalName = name.replace(/-/g, '_');
+            const prefix = `- \`/${t(`${originalName}_command.name` as TranslationKey)}\`:`;
+            return `${prefix} ${t(`${originalName}_command.description` as TranslationKey)}`;
+          })
+          .join('\n')}
+      `,
+    );
   };
 }

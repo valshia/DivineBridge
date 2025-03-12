@@ -1,11 +1,11 @@
 import { Database, MembershipRoleCollection } from '@divine-bridge/common';
-import { defaultLocale, getTFunc } from '@divine-bridge/i18n';
-import { Events, Interaction, PermissionsBitField } from 'discord.js';
+import { defaultLocale, t } from '@divine-bridge/i18n';
+import dedent from 'dedent';
+import { Events, Interaction, MessageFlags, PermissionsBitField } from 'discord.js';
 
 import { VerifyCommand } from '../commands/verify.js';
 import { ChatInputCommand } from '../structures/chat-input-command.js';
 import { EventHandler } from '../structures/event-handler.js';
-import { readablePermissionsMap } from '../utils/discord.js';
 import { Utils } from '../utils/index.js';
 
 export class InteractionCreateEventHandler extends EventHandler<Events.InteractionCreate> {
@@ -19,7 +19,7 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
       // Auto complete
       if (interaction.isAutocomplete()) {
         const { commandId, commandName } = interaction;
-        if (commandName in this.context.bot.chatInputCommandMap === false) {
+        if (!(commandName in this.context.bot.chatInputCommandMap)) {
           this.context.logger.error(
             `Autocomplete command not found: ${commandName} (${commandId})`,
           );
@@ -31,7 +31,7 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
           const authorLocale = authorDoc.preference.locale;
           await autoCompleteCommand.autocomplete(interaction, {
             authorLocale,
-            author_t: getTFunc(authorLocale),
+            author_t: (key) => t(key, authorLocale),
           });
         } else if (guild !== null) {
           const [authorDoc, guildDoc] = await Promise.all([
@@ -52,9 +52,9 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
             guild,
             guildDoc,
             guildLocale,
-            guild_t: getTFunc(guildLocale),
+            guild_t: (key) => t(key, guildLocale),
             authorLocale,
-            author_t: getTFunc(authorLocale),
+            author_t: (key) => t(key, authorLocale),
           });
         }
         return;
@@ -63,7 +63,7 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
       // Chat input command
       if (interaction.isChatInputCommand()) {
         const { commandId, commandName } = interaction;
-        let chatInputCommand: ChatInputCommand<true> | ChatInputCommand<false> | null = null;
+        let chatInputCommand: ChatInputCommand | ChatInputCommand<false> | null = null;
         if (commandName in this.context.bot.chatInputCommandMap) {
           chatInputCommand = this.context.bot.chatInputCommandMap[commandName];
         }
@@ -81,7 +81,10 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
           const guildLocale = guildDoc.config.locale ?? defaultLocale;
           const authorLocale = authorDoc.preference.locale;
           if (membershipRoleDoc !== null) {
-            const verifyCommand = this.context.bot.chatInputCommandMap['verify'] ?? null;
+            const verifyCommand =
+              'verify' in this.context.bot.chatInputCommandMap
+                ? this.context.bot.chatInputCommandMap.verify
+                : null;
             if (verifyCommand !== null && verifyCommand instanceof VerifyCommand) {
               await verifyCommand.executeAlias(
                 interaction,
@@ -90,9 +93,9 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
                   guild,
                   guildDoc,
                   guildLocale,
-                  guild_t: getTFunc(guildLocale),
+                  guild_t: (key) => t(key, guildLocale),
                   authorLocale,
-                  author_t: getTFunc(authorLocale),
+                  author_t: (key) => t(key, authorLocale),
                 },
               );
               return;
@@ -110,7 +113,7 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
           const authorLocale = authorDoc.preference.locale;
           await chatInputCommand.execute(interaction, {
             authorLocale,
-            author_t: getTFunc(authorLocale),
+            author_t: (key) => t(key, authorLocale),
           });
         } else if (guild !== null) {
           // Check bot permissions if in a guild
@@ -125,12 +128,13 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
             .missing(permissions);
           if (missingPermissions.length > 0) {
             await interaction.reply({
-              content:
-                'I need the following permission to run this command:\n' +
-                missingPermissions
-                  .map((permission) => `- ${readablePermissionsMap[permission]}`)
-                  .join(', '),
-              ephemeral: true,
+              content: dedent`
+                I need the following permission to run this command:
+                ${missingPermissions
+                  .map((permission) => `- ${permission.replace(/([a-z])([A-Z])/g, '$1 $2')}`)
+                  .join(', ')}
+              `,
+              flags: [MessageFlags.Ephemeral],
             });
             return;
           }
@@ -148,14 +152,14 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
             guild,
             guildDoc,
             guildLocale,
-            guild_t: getTFunc(guildLocale),
+            guild_t: (key) => t(key, guildLocale),
             authorLocale,
-            author_t: getTFunc(authorLocale),
+            author_t: (key) => t(key, authorLocale),
           });
         } else {
           await interaction.reply({
             content: 'This command is only available in a server.',
-            ephemeral: true,
+            flags: [MessageFlags.Ephemeral],
           });
         }
         return;
@@ -164,7 +168,7 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
       // Button
       if (interaction.isButton()) {
         const { customId } = interaction;
-        if (customId in this.context.bot.buttonMap === false) {
+        if (!(customId in this.context.bot.buttonMap)) {
           return;
         }
         const buttonCommand = this.context.bot.buttonMap[customId];
@@ -179,7 +183,7 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
           const authorLocale = authorDoc.preference.locale;
           await buttonCommand.execute(interaction, {
             authorLocale: authorDoc.preference.locale,
-            author_t: getTFunc(authorLocale),
+            author_t: (key) => t(key, authorLocale),
           });
           return;
         } else if (guild !== null) {
@@ -193,9 +197,9 @@ export class InteractionCreateEventHandler extends EventHandler<Events.Interacti
             guild,
             guildDoc,
             guildLocale,
-            guild_t: getTFunc(guildLocale),
+            guild_t: (key) => t(key, guildLocale),
             authorLocale,
-            author_t: getTFunc(authorLocale),
+            author_t: (key) => t(key, authorLocale),
           });
         }
         return;

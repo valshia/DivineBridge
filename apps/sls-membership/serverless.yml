@@ -1,0 +1,35 @@
+service: sls-membership
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+
+functions:
+  check-auth-membership:
+    handler: src/index.checkAuthMembership
+    timeout: 900
+    url: true
+  check-screenshot-membership:
+    handler: src/index.checkScreenshotMembership
+    timeout: 900
+    url: true
+  update-member-only-videos:
+    handler: src/index.updateMemberOnlyVideos
+    timeout: 900
+    url: true
+
+build:
+  esbuild:
+    configFile: esbuild.config.js
+
+plugins:
+  - serverless-dotenv-plugin
+  - '@divine-bridge/serverless-offline-lambda-function-urls'
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    lambdaPort: 3011
+    urlLambdaFunctionsHttpPort: 5011
+    urlLambdaFunctionsHttpVerbs:
+      - POST

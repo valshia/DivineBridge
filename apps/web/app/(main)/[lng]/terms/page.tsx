@@ -1,13 +1,26 @@
+import { Metadata } from 'next';
 import Link from 'next/link';
 
 import styles from '../../../../styles/Document.module.css';
 
-export default function TermsOfUsePage() {
+import { publicEnv } from '../../../../libs/common/public-env';
+import { getServerTranslation } from '../../../../libs/server/i18n';
+import { WithI18nParams } from '../../../../types/common';
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: `${publicEnv.NEXT_PUBLIC_WEB_URL}/terms`,
+  },
+};
+
+export default async function TermsOfUsePage(props: WithI18nParams) {
+  const params = await props.params;
+  const { t } = await getServerTranslation(params.lng);
   return (
     <div className={`my-5 container text-white ${styles.documentRoot}`}>
       <div>
-        <h1>TERMS OF USE</h1>
-        <p>Last updated Feb 12, 2024</p>
+        <h1>{t('web.Terms of Use')}</h1>
+        <p>{t('web.Last updated')} Feb 12, 2024</p>
         <h2>AGREEMENT TO OUR LEGAL TERMS</h2>
         <p>
           We are Divine Bridge (&quot;<strong>we</strong>,&quot; &quot;<strong>us</strong>

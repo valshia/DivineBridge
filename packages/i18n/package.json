@@ -2,24 +2,25 @@
   "name": "@divine-bridge/i18n",
   "version": "0.0.1",
   "dependencies": {
-    "i18next": "^23.10.0",
-    "tsup": "^8.0.1",
-    "zod": "^3.22.4"
+    "i18next": "^24.2.1",
+    "tsup": "8.3.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@divine-bridge/eslint-config-custom": "workspace:^",
     "@divine-bridge/prettier-config-custom": "workspace:^",
-    "@types/node": "^20.11.16",
-    "eslint": "^8.56.0",
-    "eslint-plugin-import-esm": "^1.2.1",
-    "prettier": "^3.2.5",
-    "typescript": "^5.3.3"
+    "@types/node": "^22.10.7",
+    "eslint": "^9.18.0",
+    "eslint-plugin-import-esm": "^2.0.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
   },
   "exports": "./dist/index.js",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsup --minify && pnpm run build:dts",
     "build:dts": "tsc -p ./dts-tsconfig.json --emitDeclarationOnly && echo \"\\033[1;35mDTS\\033[0m 🚀 Successfully Built\"",
+    "check-types": "tsc --noemit",
     "dev": "tsup --watch --onSuccess \"pnpm run build:dts\"",
     "format": "prettier --write .",
     "lint": "eslint ."

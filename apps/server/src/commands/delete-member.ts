@@ -8,7 +8,14 @@ import { t } from '@divine-bridge/i18n';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import utc from 'dayjs/plugin/utc.js';
-import { ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import dedent from 'dedent';
+import {
+  ChatInputCommandInteraction,
+  InteractionContextType,
+  MessageFlags,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from 'discord.js';
 
 import { ChatInputCommand } from '../structures/chat-input-command.js';
 import { discordBotApi } from '../utils/discord.js';
@@ -36,8 +43,8 @@ export class DeleteMemberCommand extends ChatInputCommand {
         .setRequired(true),
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
-    .setDMPermission(false);
-  public readonly global = true;
+    .setContexts(InteractionContextType.Guild);
+  public readonly devTeamOnly = false;
   public readonly guildOnly = true;
   public readonly moderatorOnly = true;
   public readonly requiredClientPermissions = [PermissionFlagsBits.ManageRoles];
@@ -48,7 +55,7 @@ export class DeleteMemberCommand extends ChatInputCommand {
   ) {
     const { user: moderator, options } = interaction;
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     // Get log channel and membership role, check if the role is manageable, and upsert guild
     const role = options.getRole('role', true);
@@ -90,15 +97,16 @@ export class DeleteMemberCommand extends ChatInputCommand {
 
     // Ask for confirmation
     const confirmResult = await Utils.awaitUserConfirm(author_t, interaction, 'delete-member', {
-      content:
-        `${author_t('server.delete_member_confirm_1')} <@&${role.id}> ${author_t('server.delete_member_confirm_2')} <@${user.id}> ${author_t('server.delete_member_confirm_3')}\n` +
-        author_t(
+      content: dedent`
+        ${author_t('server.delete_member_confirm_1')} <@&${role.id}> ${author_t('server.delete_member_confirm_2')} <@${user.id}> ${author_t('server.delete_member_confirm_3')}
+        ${author_t(
           'server.Please note that this does not block the user from applying for the membership again',
-        ),
+        )}
+      `,
     });
     if (!confirmResult.confirmed) return;
     const confirmedInteraction = confirmResult.interaction;
-    await confirmedInteraction.deferReply({ ephemeral: true });
+    await confirmedInteraction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     // Initialize log service and membership service
     const appEventLogService = await new AppEventLogService(
@@ -134,16 +142,18 @@ export class DeleteMemberCommand extends ChatInputCommand {
     // Check if the role is successfully removed
     if (!roleRemoved) {
       return await confirmedInteraction.editReply({
-        content:
-          `${author_t('server.I cannot remove the membership role')} <@&${membershipRoleDoc._id}> ${author_t('server.from the user')} <@${user.id}> ${author_t('server.due to one of the following reasons')}\n` +
-          `- ${author_t('server.The user has left the server')}\n` +
-          `- ${author_t('server.The membership role has been removed from the server')}\n` +
-          `- ${author_t('server.The bot does not have the permission to manage roles')}\n` +
-          `- ${author_t('server.The bot is no longer in the server')}\n` +
-          `- ${author_t('server.Other unknown bot error')}\n\n` +
-          author_t(
+        content: dedent`
+          ${author_t('server.I cannot remove the membership role')} <@&${membershipRoleDoc._id}> ${author_t('server.from the user')} <@${user.id}> ${author_t('server.due to one of the following reasons')}
+          - ${author_t('server.The user has left the server')}
+          - ${author_t('server.The membership role has been removed from the server')}
+          - ${author_t('server.The bot does not have the permission to manage roles')}
+          - ${author_t('server.The bot is no longer in the server')}
+          - ${author_t('server.Other unknown bot error')}
+
+          ${author_t(
             'server.If you believe this is an unexpected error please contact the bot owner to resolve this issue',
-          ),
+          )}
+        `,
       });
     }
 

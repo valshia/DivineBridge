@@ -1,10 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 const sitemapConfig = {
-  siteUrl:
-    process.env.AUTH_URL ??
-    (() => {
-      throw new Error('Missing NEXTAUTH_URL env var');
-    }),
+  siteUrl: process.env.NEXT_PUBLIC_WEB_URL ?? '',
   generateRobotsTxt: true,
   exclude: ['/dashboard*'],
 };

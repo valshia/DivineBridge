@@ -2,29 +2,29 @@
   "name": "divine-bridge",
   "version": "0.0.1",
   "devDependencies": {
-    "husky": "^9.0.10",
-    "lint-staged": "^15.2.1",
-    "syncpack": "^12.3.0",
-    "turbo": "^1.12.4"
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "syncpack": "^13.0.0",
+    "turbo": "^2.3.3"
   },
   "license": "MIT",
   "lint-staged": {
-    "*.{mjs,cjs,js,ts,tsx,jsx}": [
-      "eslint"
-    ],
     "*.{json,md,html,mjs,cjs,js,jsx,ts,tsx}": [
       "prettier --write"
     ]
   },
-  "packageManager": "pnpm@8.15.4",
+  "packageManager": "pnpm@9.15.4",
+  "resolutions": {
+    "tsup": "8.3.0"
+  },
   "scripts": {
     "build": "turbo run build",
     "build:server": "turbo run build --filter server",
     "build:web": "turbo run build --filter web",
+    "check-types": "turbo run check-types",
     "config:aws": "./scripts/aws-config.sh",
     "deploy:sls-backup": "turbo run deploy --filter sls-backup",
-    "deploy:sls-check-membership": "turbo run deploy --filter sls-check-membership",
-    "deploy:sls-ocr": "turbo run deploy --filter sls-ocr",
+    "deploy:sls-membership": "turbo run deploy --filter sls-membership",
     "deploy:web": "vercel --prod deploy",
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter web --filter @divine-bridge/common --filter @divine-bridge/i18n",
@@ -46,5 +46,6 @@
       "prod",
       "resolutions"
     ]
-  }
+  },
+  "type": "module"
 }

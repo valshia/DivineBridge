@@ -18,17 +18,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 22.x
 
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 8
+      - uses: pnpm/action-setup@v4
 
       - name: Install dependencies
         run: pnpm install
-
-      - name: Load test environment variables
-        run: echo "${{ secrets.OCR_SERVICE_TEST_ENV }}" | base64 --decode >> ./packages/ocr-service/.env.test.local
 
       - name: Run tests
         run: pnpm run test

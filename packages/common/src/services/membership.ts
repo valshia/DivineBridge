@@ -1,12 +1,12 @@
 import { TLocaleFunc } from '@divine-bridge/i18n';
 import dayjs from 'dayjs';
+import dedent from 'dedent';
 
 import { Embeds } from '../components/embeds.js';
 import { UserDoc } from '../index.js';
 import { MembershipRoleDoc } from '../models/membership-role.js';
 import { MembershipCollection, MembershipDoc } from '../models/membership.js';
-import { YouTubeChannelDoc } from '../models/youtube-channel.js';
-import { UserPayload } from '../types/common.js';
+import { MembershipRoleDocWithValidYouTubeChannel, UserPayload } from '../types/common.js';
 import { Database } from '../utils/database.js';
 import { AppEventLogService } from './app-event-log.js';
 import { DiscordBotAPI } from './discord-bot-api.js';
@@ -109,9 +109,7 @@ export class MembershipService {
   public async reject(args: {
     userLocale: string | undefined;
     guildName: string;
-    membershipRoleDoc: Omit<MembershipRoleDoc, 'youtube'> & {
-      youtube: YouTubeChannelDoc;
-    };
+    membershipRoleDoc: MembershipRoleDocWithValidYouTubeChannel;
     userId: string;
     reason: string;
   }): Promise<{ notified: boolean }> {
@@ -124,7 +122,13 @@ export class MembershipService {
       content:
         `${this.t('common.Your screenshot for the YouTube channel', userLocale)} \`${youtubeChannelTitle}\` ${this.t('common.has been rejected in the server', userLocale)} \`${guildName}\`` +
         (reason.length > 0
-          ? `\n${this.t('common.Reason', userLocale)}: \`\`\`\n${reason}\n\`\`\``
+          ? dedent`
+            
+            ${this.t('common.Reason', userLocale)}:
+            \`\`\`
+            ${reason}
+            \`\`\`
+          `
           : ''),
     });
 
@@ -218,9 +222,7 @@ export class MembershipService {
   public async purgeRole(args: {
     guildLocale: string | undefined;
     guildId: string;
-    membershipRoleDoc: Omit<MembershipRoleDoc, 'youtube'> & {
-      youtube: YouTubeChannelDoc;
-    };
+    membershipRoleDoc: MembershipRoleDocWithValidYouTubeChannel;
     membershipDocs: (Omit<MembershipDoc, 'user'> & {
       user: UserDoc | null;
     })[];
@@ -238,12 +240,13 @@ export class MembershipService {
 
     // Send event log to the log channel
     await this.appEventLogService.log({
-      content:
-        `${this.t('common.The membership role', guildLocale)} <@&${membershipRoleDoc._id}> ${this.t('common.has been removed since', guildLocale)}${removeReason}.\n` +
-        this.t(
+      content: dedent`
+        ${this.t('common.The membership role', guildLocale)} <@&${membershipRoleDoc._id}> ${this.t('common.has been removed since', guildLocale)}${removeReason}
+        ${this.t(
           'common.I will try to remove the role from the members but if I failed to do so please remove the role manually If you believe this is an error please contact the bot owner to resolve this issue',
           guildLocale,
-        ),
+        )}
+      `,
     });
 
     // Remove the membership role from the users

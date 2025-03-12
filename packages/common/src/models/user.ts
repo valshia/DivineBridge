@@ -1,3 +1,4 @@
+import { defaultLocale } from '@divine-bridge/i18n';
 import mongoose, { Document, Model, Schema, model } from 'mongoose';
 
 export interface UserAttrs {
@@ -21,6 +22,9 @@ export interface UserDoc extends UserAttrs, Document<string> {
     thumbnail: string;
     refreshToken: string;
   } | null;
+  flags: {
+    tutorial: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,7 +55,7 @@ const userSchema = new Schema<UserDoc>(
       locale: {
         type: String,
         required: true,
-        default: 'en-US',
+        default: defaultLocale,
       },
     },
     youtube: {
@@ -84,6 +88,13 @@ const userSchema = new Schema<UserDoc>(
       ),
       default: null,
     },
+    flags: {
+      tutorial: {
+        type: Boolean,
+        required: true,
+        default: false,
+      },
+    },
   },
   {
     timestamps: true,
@@ -105,5 +116,5 @@ const userSchema = new Schema<UserDoc>(
 );
 
 export const UserCollection =
-  (mongoose.models.User as unknown as UserModel) ??
+  (mongoose.models.User as unknown as UserModel | undefined) ??
   model<UserDoc, UserModel>('User', userSchema, 'User');

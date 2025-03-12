@@ -1,34 +1,38 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
+  "tasks": {
     "dev": {
-      "dependsOn": [
-        "@divine-bridge/i18n#build",
-        "@divine-bridge/ocr-service#build",
-        "@divine-bridge/common#build"
-      ],
-      "dotEnv": [".env.development.local", ".env"],
-      "cache": false
+      "dependsOn": ["@divine-bridge/i18n#build", "@divine-bridge/common#build"],
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env.development.local", ".env"]
     },
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "build/**", "dist/**"],
-      "dotEnv": [".env.production.local", ".env"],
-      "cache": false
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env.production.local", ".env"]
     },
     "deploy": {
       "dependsOn": ["^build"],
-      "dotEnv": [".env.production.local", ".env"],
-      "inputs": ["$TURBO_DEFAULT$", "mongodump"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "mongodump",
+        ".env.production.local",
+        ".env"
+      ],
+      "env": [
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_REGION",
+        "SERVERLESS_ACCESS_KEY"
+      ]
     },
     "start": {
       "dependsOn": ["^build"]
     },
     "lint": {},
     "format": {},
-    "test": {
-      "dependsOn": ["^build"],
-      "dotEnv": [".env.test"]
-    }
+    "test": {},
+    "check-types": {}
   }
 }
